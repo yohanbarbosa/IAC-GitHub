@@ -1,7 +1,20 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Description: EC2 creada desde GitHub Actions
 
 Resources:
+
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Permitir trafico HTTP
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: SG-HTTP
 
   MyEC2:
     Type: AWS::EC2::Instance
@@ -10,6 +23,100 @@ Resources:
       ImageId: ami-0cca150d127c2216f
       InstanceType: t3.micro
 
+      SecurityGroupIds:
+        - !Ref MySecurityGroup
+
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+
+          systemctl enable httpd
+          systemctl start httpd
+
+          cat > /var/www/html/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="es">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>CloudFormation Demo</title>
+              <style>
+                  * {
+                      margin: 0;
+                      padding: 0;
+                      box-sizing: border-box;
+                      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                  }
+
+                  body {
+                      background: linear-gradient(135deg, #0f172a, #1e293b);
+                      color: white;
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+                      min-height: 100vh;
+                      padding: 20px;
+                  }
+
+                  .container {
+                      max-width: 800px;
+                      text-align: center;
+                      background: rgba(255,255,255,0.08);
+                      backdrop-filter: blur(10px);
+                      border-radius: 20px;
+                      padding: 50px;
+                      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                  }
+
+                  h1 {
+                      font-size: 3rem;
+                      margin-bottom: 20px;
+                      color: #38bdf8;
+                  }
+
+                  p {
+                      font-size: 1.2rem;
+                      color: #cbd5e1;
+                      margin-bottom: 15px;
+                  }
+
+                  .badge {
+                      display: inline-block;
+                      margin-top: 20px;
+                      padding: 12px 24px;
+                      background: #22c55e;
+                      color: white;
+                      border-radius: 999px;
+                      font-weight: bold;
+                  }
+
+                  .footer {
+                      margin-top: 30px;
+                      font-size: 0.9rem;
+                      color: #94a3b8;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>🚀 Despliegue Exitoso</h1>
+                  <p>Esta instancia EC2 fue creada mediante AWS CloudFormation.</p>
+                  <p>La infraestructura fue desplegada automáticamente desde GitHub Actions.</p>
+
+                  <div class="badge">
+                      ✅ Apache HTTP Server Activo
+                  </div>
+
+                  <div class="footer">
+                      AWS • CloudFormation • GitHub Actions • EC2
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
+
       Tags:
         - Key: Name
           Value: EC2-GitHubActions
@@ -17,4 +124,13 @@ Resources:
 Outputs:
 
   InstanceId:
+    Description: ID de la instancia EC2
     Value: !Ref MyEC2
+
+  PublicIP:
+    Description: IP publica de la instancia
+    Value: !GetAtt MyEC2.PublicIp
+
+  SecurityGroupId:
+    Description: ID del Security Group
+    Value: !Ref MySecurityGroup
